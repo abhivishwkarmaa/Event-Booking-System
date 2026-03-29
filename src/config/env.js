@@ -21,7 +21,7 @@ function int(name, fallback) {
 
 export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
-  port: int('PORT', 3000),
+  port: int('PORT', 5000),
   db: {
     host: req('DB_HOST'),
     port: int('DB_PORT', 3306),

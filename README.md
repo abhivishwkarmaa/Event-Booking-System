@@ -16,7 +16,7 @@ Backend service for a **mini event management** flow: browse upcoming events, bo
 | 2 | Install dependencies: `npm install` |
 | 3 | Create a MySQL database and a user with access to it. |
 | 4 | Apply schema — run **one** of these from the project root:<br>• Empty database: `mysql -u USER -p DATABASE < db/migrations/001_initial_schema.sql`<br>• Full reset (drops existing tables): `mysql -u USER -p DATABASE < db/schema.sql` |
-| 5 | Copy `cp .env.example .env` and set `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `PORT` (default `3000`). |
+| 5 | Copy `cp .env.example .env` and set `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `PORT` (default `5000`). |
 | 6 | *(Optional)* Load sample data: `mysql -u USER -p DATABASE < db/seed.sql` |
 | 7 | Start: `npm start` — or `npm run dev` for auto-reload (Node 18+). |
 | 8 | Verify: `GET /health`, Swagger at `/api-docs`, example `GET /api/events?page=1&limit=20` (use the configured `PORT`). |
@@ -27,7 +27,7 @@ The stack includes **MySQL 8** and the **API**. On first start, `db/schema.sql` 
 
 1. Copy `.env.example` to `.env` and set at least `DB_USER`, `DB_PASSWORD`, `DB_NAME` (defaults match Compose). Compose **overrides** `DB_HOST` to `mysql` and `DB_PORT` to `3306` for the API container.
 2. From the project root: `docker compose up --build`
-3. API: `http://localhost:${PORT}` (default `3000`). MySQL is exposed on the host as **`MYSQL_PUBLISH_PORT` → container 3306** (default **`3307`** so it does not clash with a system MySQL on **3306**).
+3. API: `http://localhost:${PORT}` (default `5000`). MySQL is exposed on the host as **`MYSQL_PUBLISH_PORT` → container 3306** (default **`3307`** so it does not clash with a system MySQL on **3306**).
 
 **Docker without bundled MySQL:** run only the API image and point MySQL at an external host; set `DB_HOST` to `host.docker.internal` (macOS/Windows) or the host IP (Linux) when MySQL runs on the machine instead of Compose.
 
@@ -90,7 +90,7 @@ The build follows the published **Event Booking System** backend brief (REST API
 
 | Variable | Role |
 |----------|------|
-| `PORT` | HTTP port (default `3000`) |
+| `PORT` | HTTP port (default `5000`) |
 | `DB_HOST`, `DB_PORT` | MySQL endpoint |
 | `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Credentials |
 | `DB_CONNECTION_LIMIT` | Pool size (default `10`) |
@@ -156,4 +156,4 @@ MIT (unless the organization specifies otherwise).
 
 https://event-booking-system-vl6o.onrender.com/api-docs/
 
-http://94.136.187.247:3008/api-docs
+http://94.136.187.247:5000/api-docs

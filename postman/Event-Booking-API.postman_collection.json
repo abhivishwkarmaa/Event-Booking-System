@@ -1,17 +1,17 @@
 {
   "info": {
     "name": "Event Booking API",
-    "description": "Collection for the Event Booking System API (base URL: http://localhost:3008/api)",
+    "description": "Collection for the Event Booking System API (base URL: http://localhost:5000/api)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:3008/api"
+      "value": "http://localhost:5000/api"
     },
     {
       "key": "rootUrl",
-      "value": "http://localhost:3008"
+      "value": "http://localhost:5000"
     }
   ],
   "item": [
