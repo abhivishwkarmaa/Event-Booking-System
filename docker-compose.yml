@@ -1,0 +1,7 @@
+services:
+  api:
+    build: .
+    ports:
+      - "${PORT:-3008}:${PORT:-3008}"
+    env_file:
+      - .env

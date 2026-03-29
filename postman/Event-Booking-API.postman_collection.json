@@ -1,0 +1,107 @@
+{
+  "info": {
+    "name": "Event Booking API",
+    "description": "Collection for the Event Booking System API (base URL: http://localhost:3008/api)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3008/api"
+    },
+    {
+      "key": "rootUrl",
+      "value": "http://localhost:3008"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{rootUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "List upcoming events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create event",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Concert Night\",\n  \"description\": \"Live music\",\n  \"date\": \"2030-06-01T18:00:00.000Z\",\n  \"totalCapacity\": 500\n}"
+            },
+            "url": "{{baseUrl}}/events"
+          }
+        },
+        {
+          "name": "Mark attendance",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingCode\": \"00000000-0000-4000-8000-000000000000\"\n}"
+            },
+            "url": "{{baseUrl}}/events/1/attendance"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "Create booking",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"eventId\": 1\n}"
+            },
+            "url": "{{baseUrl}}/bookings"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List user bookings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/users/1/bookings"
+          }
+        }
+      ]
+    }
+  ]
+}

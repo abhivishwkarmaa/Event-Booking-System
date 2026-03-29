@@ -1,0 +1,374 @@
+openapi: 3.0.3
+info:
+  title: Event Booking API
+  description: |
+    Production-oriented REST API for listing events, booking tickets with transactional
+    inventory control, listing user bookings, and marking attendance by booking code.
+  version: 1.0.0
+servers:
+  - url: /api
+    description: Base path; Swagger UI overwrites this via /api-docs/swagger.json
+tags:
+  - name: Events
+  - name: Bookings
+  - name: Users
+  - name: Health
+paths:
+  /events:
+    get:
+      tags: [Events]
+      summary: List upcoming events
+      description: Returns events with `event_date >= now`, ordered by date ascending.
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Events]
+      summary: Create event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEventRequest'
+      responses:
+        '201':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleEventResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /events/{id}/attendance:
+    post:
+      tags: [Events]
+      summary: Mark attendance
+      description: Validates booking code for the given event and records a single attendance entry.
+      parameters:
+        - $ref: '#/components/parameters/EventId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkAttendanceRequest'
+      responses:
+        '201':
+          description: Attendance recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Already checked in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /bookings:
+    post:
+      tags: [Bookings]
+      summary: Book a ticket
+      description: |
+        Runs in a DB transaction with `SELECT ... FOR UPDATE` on the event row to prevent
+        overbooking under concurrent load.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+      responses:
+        '201':
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingCreatedResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Sold out or duplicate booking code (extremely rare)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /users/{id}/bookings:
+    get:
+      tags: [Users]
+      summary: List bookings for a user
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Bookings with embedded event summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserBookingsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  parameters:
+    EventId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data: {}
+        meta:
+          type: object
+    ErrorResponse:
+      type: object
+      required: [success, error]
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required: [message, code]
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  path:
+                    type: string
+                  message:
+                    type: string
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        date:
+          type: string
+          format: date-time
+        totalCapacity:
+          type: integer
+        remainingTickets:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateEventRequest:
+      type: object
+      required: [title, date, totalCapacity]
+      properties:
+        title:
+          type: string
+          maxLength: 500
+        description:
+          type: string
+          nullable: true
+        date:
+          type: string
+          format: date-time
+          description: Must be in the future (ISO-8601)
+        totalCapacity:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+    CreateBookingRequest:
+      type: object
+      required: [userId, eventId]
+      properties:
+        userId:
+          type: integer
+          minimum: 1
+        eventId:
+          type: integer
+          minimum: 1
+    MarkAttendanceRequest:
+      type: object
+      required: [bookingCode]
+      properties:
+        bookingCode:
+          type: string
+          format: uuid
+    EventListResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Event'
+            meta:
+              type: object
+              properties:
+                page:
+                  type: integer
+                limit:
+                  type: integer
+                total:
+                  type: integer
+                totalPages:
+                  type: integer
+    SingleEventResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Event'
+    BookingCreatedResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                id:
+                  type: integer
+                userId:
+                  type: integer
+                eventId:
+                  type: integer
+                bookingCode:
+                  type: string
+                  format: uuid
+                event:
+                  $ref: '#/components/schemas/Event'
+    UserBookingsResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  userId:
+                    type: integer
+                  eventId:
+                    type: integer
+                  bookingCode:
+                    type: string
+                  bookingDate:
+                    type: string
+                    format: date-time
+                  event:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                      date:
+                        type: string
+                        format: date-time
+                      totalCapacity:
+                        type: integer
+                      remainingTickets:
+                        type: integer
+    AttendanceResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                bookingId:
+                  type: integer
+                eventId:
+                  type: integer
+                bookingCode:
+                  type: string
+                  format: uuid
+                entryTime:
+                  type: string
+                  format: date-time
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
