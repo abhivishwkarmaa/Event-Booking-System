@@ -1,119 +1,154 @@
-# Event Booking API
+# Event Booking System — Backend API
 
-Production-oriented **Node.js + Express + MySQL** backend for listing events, booking tickets with transactional inventory control, listing a user’s bookings, and marking attendance by booking code.
+Backend service for a **mini event management** flow: browse upcoming events, book tickets with safe inventory updates, list a user’s bookings, and record attendance by booking code.
 
-## Architecture
+**Stack:** Node.js (ES modules), Express, MySQL (`mysql2` pool), Joi validation, OpenAPI 3 (`docs/openapi.yaml`), Postman collection, optional Docker image for the API.
 
-- **No `src/models` folder:** there is no ORM; request shapes are validated with **Joi** (`validators/`) and rows are mapped in **repositories** / **utils**.  
-- **Clean layering:** Controller → Service → Repository → MySQL  
-- **SOLID / DRY / KISS:** thin controllers, injectable collaborators via a composition root (`src/container.js`)  
-- **Concurrency:** booking uses a **transaction** with **`SELECT … FOR UPDATE`** on the `events` row, then conditional `UPDATE` + `INSERT` to avoid overbooking  
-- **Validation:** **Joi** at the edge; **centralized error handler** with consistent JSON  
-- **API docs:** OpenAPI **3** spec at `docs/openapi.yaml`, served by Swagger UI at **`/api-docs`**  
-- **Pooling:** **mysql2** connection pool (size from env)
+---
 
-## Folder structure
+## Setup and run
 
-```
-.
-├── db/
-│   ├── schema.sql          # Dev reset: DROP + CREATE (local / docker init)
-│   ├── migrations/
-│   │   └── 001_initial_schema.sql   # First migration — empty DB only (no DROP)
-│   └── seed.sql            # Optional demo data
-├── docs/
-│   └── openapi.yaml        # OpenAPI specification
-├── postman/
-│   └── Event-Booking-API.postman_collection.json
-├── src/
-│   ├── app.js              # Express app, middleware, Swagger, routes
-│   ├── server.js           # HTTP listener
-│   ├── container.js        # Dependency wiring
-│   ├── config/
-│   │   └── env.js          # Env validation
-│   ├── db/
-│   │   └── pool.js         # mysql2 connection pool
-│   ├── controllers/
-│   ├── services/
-│   ├── repositories/
-│   ├── routes/
-│   ├── middlewares/
-│   ├── validators/
-│   └── utils/
-├── docker-compose.yml
-├── Dockerfile
-├── package.json
-└── README.md
-```
+### Local (Node.js + MySQL)
 
-## API (base path `/api`)
+| Step | Action |
+|------|--------|
+| 1 | Clone the repository and open the project directory. |
+| 2 | Install dependencies: `npm install` |
+| 3 | Create a MySQL database and a user with access to it. |
+| 4 | Apply schema — run **one** of these from the project root:<br>• Empty database: `mysql -u USER -p DATABASE < db/migrations/001_initial_schema.sql`<br>• Full reset (drops existing tables): `mysql -u USER -p DATABASE < db/schema.sql` |
+| 5 | Copy `cp .env.example .env` and set `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `PORT` (default `3000`). |
+| 6 | *(Optional)* Load sample data: `mysql -u USER -p DATABASE < db/seed.sql` |
+| 7 | Start: `npm start` — or `npm run dev` for auto-reload (Node 18+). |
+| 8 | Verify: `GET /health`, Swagger at `/api-docs`, example `GET /api/events?page=1&limit=20` (use the configured `PORT`). |
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/events` | Upcoming events (paginated: `page`, `limit`) |
-| `POST` | `/events` | Create event |
-| `POST` | `/bookings` | Book ticket (transaction + row lock) |
-| `GET` | `/users/:id/bookings` | User’s bookings (with event summary, single query) |
-| `POST` | `/events/:id/attendance` | Mark attendance with `bookingCode` (UUID) |
+### Docker Compose (API + MySQL)
 
-Health: `GET /health` (no `/api` prefix).  
-Interactive docs: `GET /api-docs`.
+The stack includes **MySQL 8** and the **API**. On first start, `db/schema.sql` and `db/seed.sql` run automatically (MySQL init). Data is stored in a named volume.
 
-### Response shape
+1. Copy `.env.example` to `.env` and set at least `DB_USER`, `DB_PASSWORD`, `DB_NAME` (defaults match Compose). Compose **overrides** `DB_HOST` to `mysql` and `DB_PORT` to `3306` for the API container.
+2. From the project root: `docker compose up --build`
+3. API: `http://localhost:${PORT}` (default `3000`). MySQL is published on host port **`MYSQL_PUBLISH_PORT`** (default `3306`).
 
-**Success:** `{ "success": true, "data": …, "meta": … }` (meta when paginated)  
+**Docker without bundled MySQL:** run only the API image and point MySQL at an external host; set `DB_HOST` to `host.docker.internal` (macOS/Windows) or the host IP (Linux) when MySQL runs on the machine instead of Compose.
 
-**Error:** `{ "success": false, "error": { "message", "code", "details?" } }`
-
-## Configuration
-
-Copy `.env.example` to `.env` and adjust:
-
-| Variable | Description |
-|----------|-------------|
-| `PORT` | HTTP port (default `3000`) |
-| `DB_HOST`, `DB_PORT` | MySQL host/port |
-| `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Credentials & database name |
-| `DB_CONNECTION_LIMIT` | Pool size (default `10`) |
-
-## Local setup (without Docker)
-
-1. **MySQL 8** — create database and user matching `.env`.  
-2. **Tables:** either run **`db/migrations/001_initial_schema.sql`** on an empty DB, or **`db/schema.sql`** if you want DROP + recreate (handy for dev).  
-3. **Optional seed:** `mysql -u USER -p DB_NAME < db/seed.sql`  
-4. **Install & run:**
+### Quick commands (after database is ready)
 
 ```bash
 npm install
 cp .env.example .env
-# edit .env
+# set MySQL variables in .env
 npm start
 ```
 
-For development with auto-restart: `npm run dev` (Node 18+ `--watch`).
+---
 
-## Docker (API only)
+## Specification coverage
 
-MySQL alag se chal raha ho (local / cloud) — **`docker-compose` sirf Node API** build/run karta hai. **`DB_*` values project root ki `.env` se** container ke andar load hoti hain (same as `npm start`).
+The build follows the published **Event Booking System** backend brief (REST API, MySQL, OpenAPI, Postman, optional Docker).
 
-```bash
-docker compose up --build
-```
+| Topic | Brief | Implementation |
+|------|--------|----------------|
+| Runtime | Node.js + Express | Express 4, `async/await` |
+| Persistence | MySQL driver or ORM | `mysql2` connection pool |
+| Users | `id`, `name`, `email` | `users` table, unique `email` |
+| Events | title, description, date, capacities | `events` (`event_date`, `total_capacity`, `remaining_tickets`, `CHECK` constraints) |
+| Bookings | user, event, booking time, **unique code** | `bookings` with `booking_date`, **`booking_code` (UUID)**, FKs |
+| Attendance | Entry time | `attendance` → `booking_id`, `entry_time` (user via booking) |
+| Concurrency | Safe ticket booking | Transaction + `SELECT … FOR UPDATE` + conditional `UPDATE` + insert |
+| `GET /events` | Upcoming events | `GET /api/events`, future dates, pagination |
+| `POST /events` | Create event | `POST /api/events` + Joi |
+| `POST /bookings` | Book + unique code | `POST /api/bookings`, transactional decrement |
+| `GET /users/:id/bookings` | User’s bookings | `GET /api/users/:id/bookings` with event details (single query) |
+| `POST /events/:id/attendance` | Code-based check-in | `POST /api/events/:id/attendance` with `bookingCode` |
+| Quality | Errors, validation | Central error handler; Joi on body, query, params |
+| Docs | OpenAPI / Swagger | `docs/openapi.yaml`, UI at `/api-docs`, dynamic base via `/api-docs/swagger.json` |
 
-- API: `http://localhost:${PORT}` (default `3000`)  
-- Agar MySQL **host machine** par hai aur DB `DB_HOST=127.0.0.1` hai, Docker se connect ke liye macOS/Windows par `DB_HOST=host.docker.internal` use karo; Linux par `extra_hosts` ya DB ka reachable IP.
+**Attendance model:** One booking corresponds to one ticket. Check-in uses the booking code; duplicate check-in returns `409`. Aggregate ticket counts per user per event can be derived from existing booking data.
+
+---
+
+## Technical notes
+
+| Area | Approach |
+|------|----------|
+| API shape | Base path `/api`; JSON responses with `success`, `data`, and structured `error` |
+| Layering | Controllers → services → repositories; wiring in `src/container.js` |
+| MySQL | InnoDB, foreign keys, indexes on `event_date`, `user_id`, `event_id`, unique `booking_code` |
+| OpenAPI | Spec aligned with live routes and response envelopes |
+
+---
+
+## Prerequisites
+
+- Node.js 18+
+- MySQL 8.x
+- npm (or compatible client)
+
+---
+
+## Configuration
+
+| Variable | Role |
+|----------|------|
+| `PORT` | HTTP port (default `3000`) |
+| `DB_HOST`, `DB_PORT` | MySQL endpoint |
+| `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Credentials |
+| `DB_CONNECTION_LIMIT` | Pool size (default `10`) |
+
+---
+
+## Database files
+
+| File | Use |
+|------|-----|
+| `db/schema.sql` | Full DDL including `DROP` (development reset) |
+| `db/migrations/001_initial_schema.sql` | Create-only migration for an empty database |
+| `db/seed.sql` | Optional sample users and events |
+
+---
+
+## API overview
+
+Routes are under **`/api`**.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/events` | Upcoming events (`page`, `limit`) |
+| POST | `/events` | Create event |
+| POST | `/bookings` | Create booking |
+| GET | `/users/:id/bookings` | List bookings for user |
+| POST | `/events/:id/attendance` | Attendance using `bookingCode` |
+
+**Health:** `GET /health` (no `/api` prefix).  
+**Swagger UI:** `GET /api-docs`
+
+---
 
 ## Postman
 
-Import `postman/Event-Booking-API.postman_collection.json` and set `baseUrl` / `rootUrl` if your host differs.
+Collection path: `postman/Event-Booking-API.postman_collection.json`  
+Update the collection variables `baseUrl` and `rootUrl` if the host or port changes.
 
-## Engineering notes
+---
 
-- **Indexes:** `events.event_date` for upcoming listing; `bookings.user_id`, `bookings.event_id`; unique `bookings.booking_code`; unique `attendance.booking_id`.  
-- **No N+1** on user bookings: one `JOIN` query in `BookingRepository.findByUserId`.  
-- **Attendance races:** duplicate insert on `attendance.booking_id` is turned into `409 ALREADY_CHECKED_IN`.  
-- **Timezones:** listing uses `UTC_TIMESTAMP()` for “upcoming”; store event times consistently (prefer UTC in clients).
+## OpenAPI
+
+- Specification: `docs/openapi.yaml`
+- Interactive UI: `/api-docs` (dynamic `servers` entry from `/api-docs/swagger.json`)
+
+---
+
+## Repository contents
+
+| Artifact | Path |
+|----------|------|
+| SQL schema (export) | `db/schema.sql` |
+| OpenAPI specification | `docs/openapi.yaml` |
+| Postman collection | `postman/Event-Booking-API.postman_collection.json` |
+| Docker | `Dockerfile`, `docker-compose.yml` (API + MySQL, schema + seed on init) |
+
+---
 
 ## License
 
-MIT (or your organization’s default).
+MIT (unless the organization specifies otherwise).
