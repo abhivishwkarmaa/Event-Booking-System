@@ -21,7 +21,5 @@ let pool;
 
 export function getPool() {
   if (!pool) pool = createPool();
-  console.log('Database pool created');
-  console.log('Database pool', config.db.host, config.db.port, config.db.user, config.db.database);
   return pool;
 }

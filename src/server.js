@@ -3,5 +3,5 @@ import { config } from './config/env.js';
 
 const app = createApp();
 app.listen(config.port, () => {
-  console.log(`port ${config.port} (${config.nodeEnv})`);
+  console.log(`listening on ${config.port}`);
 });

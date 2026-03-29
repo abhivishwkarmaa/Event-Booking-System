@@ -2,8 +2,8 @@ openapi: 3.0.3
 info:
   title: Event Booking API
   description: |
-    Production-oriented REST API for listing events, booking tickets with transactional
-    inventory control, listing user bookings, and marking attendance by booking code.
+    REST API for events, ticket bookings (with transactional inventory), user booking
+    lists, and attendance check-in by booking code.
   version: 1.0.0
 servers:
   - url: /api
