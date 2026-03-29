@@ -27,7 +27,7 @@ The stack includes **MySQL 8** and the **API**. On first start, `db/schema.sql` 
 
 1. Copy `.env.example` to `.env` and set at least `DB_USER`, `DB_PASSWORD`, `DB_NAME` (defaults match Compose). Compose **overrides** `DB_HOST` to `mysql` and `DB_PORT` to `3306` for the API container.
 2. From the project root: `docker compose up --build`
-3. API: `http://localhost:${PORT}` (default `3000`). MySQL is published on host port **`MYSQL_PUBLISH_PORT`** (default `3306`).
+3. API: `http://localhost:${PORT}` (default `3000`). MySQL is exposed on the host as **`MYSQL_PUBLISH_PORT` → container 3306** (default **`3307`** so it does not clash with a system MySQL on **3306**).
 
 **Docker without bundled MySQL:** run only the API image and point MySQL at an external host; set `DB_HOST` to `host.docker.internal` (macOS/Windows) or the host IP (Linux) when MySQL runs on the machine instead of Compose.
 
@@ -152,3 +152,8 @@ Update the collection variables `baseUrl` and `rootUrl` if the host or port chan
 ## License
 
 MIT (unless the organization specifies otherwise).
+
+
+https://event-booking-system-vl6o.onrender.com/api-docs/
+
+http://94.136.187.247:3008/api-docs
